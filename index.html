@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FormSync — AI Form Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --surface3: #232740;
+    --border: #2a2f45;
+    --accent: #5b6af5;
+    --accent2: #7c3aed;
+    --accent-glow: rgba(91,106,245,0.25);
+    --green: #22d3a0;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --text: #e8eaf6;
+    --text2: #8b92b8;
+    --text3: #555e7a;
+    --radius: 12px;
+    --radius-lg: 18px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --transition: 0.2s cubic-bezier(.4,0,.2,1);
+  }
+  [data-theme="light"] {
+    --bg: #f0f2ff;
+    --surface: #ffffff;
+    --surface2: #f5f6ff;
+    --surface3: #eaecff;
+    --border: #d6d9f5;
+    --accent-glow: rgba(91,106,245,0.12);
+    --text: #1a1d35;
+    --text2: #4a5080;
+    --text3: #8890b8;
+    --shadow: 0 4px 24px rgba(91,106,245,0.1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background var(--transition), color var(--transition);
+  }
+  h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  button { cursor: pointer; font-family: inherit; }
+  input, select, textarea {
+    font-family: inherit;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  select option { background: var(--surface2); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    z-index: 100;
+    transition: transform var(--transition);
+  }
+  .sidebar-brand {
+    padding: 22px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .brand-name { font-size: 18px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+  .brand-name span { color: var(--accent); }
+  .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text2);
+    transition: all var(--transition);
+    border: none; background: none; text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(91,106,245,0.3);
+  }
+  .nav-item .icon { font-size: 17px; flex-shrink: 0; }
+  .sidebar-bottom { padding: 16px 12px; border-top: 1px solid var(--border); }
+  .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 18px; font-weight: 600; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .content { padding: 28px; flex: 1; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    transition: all var(--transition);
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(91,106,245,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(91,106,245,0.45); }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface3); color: var(--text); }
+  .btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .btn-danger:hover { background: rgba(248,113,113,0.25); }
+  .btn-green { background: rgba(34,211,160,0.15); color: var(--green); border: 1px solid rgba(34,211,160,0.3); }
+  .btn-green:hover { background: rgba(34,211,160,0.25); }
+  .btn-sm { padding: 7px 13px; font-size: 12px; border-radius: 8px; }
+  .btn-icon { width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .card-title { font-size: 15px; font-weight: 600; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--stat-color, var(--accent));
+  }
+  .stat-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--stat-bg, var(--accent-glow));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .stat-label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .forms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .form-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-glow), transparent);
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+  }
+  .form-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .form-card:hover::after { opacity: 1; }
+  .form-card-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .form-card-meta { font-size: 12px; color: var(--text2); display: flex; gap: 14px; margin-bottom: 14px; }
+  .form-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-blue { background: rgba(91,106,245,0.2); color: var(--accent); }
+  .badge-green { background: rgba(34,211,160,0.15); color: var(--green); }
+
+  /* ── BUILDER LAYOUT ── */
+  .builder-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+  .builder-canvas { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; min-height: 500px; }
+  .builder-panel { display: flex; flex-direction: column; gap: 14px; }
+  .field-palette-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .palette-item {
+    background: var(--surface2);
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex; align-items: center; gap: 7px;
+    cursor: pointer;
+    transition: all var(--transition);
+    color: var(--text2);
+    user-select: none;
+  }
+  .palette-item:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+  /* ── FIELDS LIST AREA ── */
+  .fields-list {
+    min-height: 60px;
+    margin-bottom: 12px;
+  }
+  /* ── DROP ZONE (always visible below fields) ── */
+  .drop-zone {
+    min-height: 80px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text3);
+    font-size: 14px;
+    transition: all var(--transition);
+    cursor: default;
+  }
+  .drop-zone.drag-over { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+
+  .field-item {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 10px;
+    transition: all var(--transition);
+    cursor: default;
+    position: relative;
+  }
+  .field-item:hover { border-color: var(--accent); }
+  .field-drag-handle { color: var(--text3); cursor: grab; font-size: 14px; flex-shrink: 0; }
+  .field-info { flex: 1; min-width: 0; }
+  .field-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .field-type { font-size: 11px; color: var(--text2); }
+  .field-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
+  /* ── Field Edit Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; }
+  .checkbox-row input[type="checkbox"] { width: auto; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+  /* ── Form Fill View ── */
+  .form-fill-wrapper { max-width: 640px; margin: 0 auto; padding: 40px 24px; }
+  .form-fill-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .form-fill-desc { font-size: 15px; color: var(--text2); }
+  .form-fill-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; }
+  .fill-field { margin-bottom: 22px; }
+  .fill-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+  .required-star { color: var(--red); }
+  .radio-group, .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-item, .checkbox-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background var(--transition);
+    font-size: 14px;
+  }
+  .radio-item:hover, .checkbox-item:hover { background: var(--surface3); }
+  .radio-item input, .checkbox-item input { width: auto; flex-shrink: 0; }
+  .field-error { font-size: 12px; color: var(--red); margin-top: 5px; }
+
+  .success-screen { display: none; text-align: center; padding: 60px 20px; }
+  .success-screen.show { display: block; }
+  .success-icon {
+    width: 80px; height: 80px;
+    background: rgba(34,211,160,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px;
+    margin: 0 auto 20px;
+    animation: bounceIn 0.4s ease;
+  }
+  @keyframes bounceIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+  .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  td { padding: 13px 16px; font-size: 13px; border-top: 1px solid var(--border); }
+  tbody tr:hover { background: var(--surface2); }
+  .td-trunc { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .search-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-input-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-input-wrap input { padding-left: 38px; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
+
+  .share-box { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  .share-link { flex: 1; font-size: 13px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
+  .copy-btn { flex-shrink: 0; }
+
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 18px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    animation: toastIn 0.3s ease;
+    max-width: 320px;
+  }
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .toast-success { border-left: 3px solid var(--green); }
+  .toast-error { border-left: 3px solid var(--red); }
+  .toast-info { border-left: 3px solid var(--accent); }
+
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .theme-toggle {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+  .settings-section { margin-bottom: 28px; }
+  .settings-section-title { font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .setting-info .setting-name { font-size: 14px; font-weight: 500; }
+  .setting-info .setting-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 24px; cursor: pointer; transition: background var(--transition); }
+  .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform var(--transition); }
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state h3 { font-size: 16px; color: var(--text2); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; }
+
+  .hamburger { display: none; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--surface2); border-radius: 9px; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: var(--text2); }
+
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .hamburger { display: flex; }
+    .builder-layout { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .content { padding: 16px; }
+    .topbar { padding: 14px 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .forms-grid { grid-template-columns: 1fr; }
+  }
+
+  .gsheet-config { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .gsheet-status { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 12px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.disconnected { background: var(--yellow); }
+
+  /* Field count badge */
+  .field-count-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .field-count-badge {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(91,106,245,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name">Form<span>Sync</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" data-page="builder" onclick="navigate('builder')">
+        <span class="icon">🛠️</span> Form Builder
+      </button>
+      <button class="nav-item" data-page="submissions" onclick="navigate('submissions')">
+        <span class="icon">📋</span> Submissions
+      </button>
+      <button class="nav-item" data-page="settings" onclick="navigate('settings')">
+        <span class="icon">⚙️</span> Settings
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div style="font-size:11px;color:var(--text3);padding:8px 14px;">
+        <div style="font-weight:600;margin-bottom:2px;">FormSync v1.0</div>
+        <div>Google Sheets Automation</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="toggleSidebar()" id="hamburger">☰</button>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
+        <button class="btn btn-primary btn-sm" onclick="navigate('builder'); newForm()">
+          <span>+</span> New Form
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- DASHBOARD PAGE -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card" style="--stat-color:var(--accent);--stat-bg:var(--accent-glow);">
+            <div class="stat-icon">📝</div>
+            <div>
+              <div class="stat-label">Total Forms</div>
+              <div class="stat-value" id="stat-forms">0</div>
+              <div class="stat-sub">Created by you</div>
+            </div>
+          </div>
+          <div class="stat-card" style="--stat-color:var(--green);--stat-bg:rgba(34,211,160,0.15);">
+            <div class="stat-icon">📨</div>
+            <div>
+              <div class="stat-label">Total Submissions</div>
+              <div class="stat-value" id="stat-subs">0</div>
+              <div class="stat-sub">Across all forms</div>
+            </div>
+          </div>
+          <div class="stat-card" style="--stat-color:var(--yellow);--stat-bg:rgba(251,191,36,0.15);">
+            <div class="stat-icon">📅</div>
+            <div>
+              <div class="stat-label">Today's Submissions</div>
+              <div class="stat-value" id="stat-today">0</div>
+              <div class="stat-sub" id="stat-today-date">—</div>
+            </div>
+          </div>
+          <div class="stat-card" style="--stat-color:#a78bfa;--stat-bg:rgba(167,139,250,0.15);">
+            <div class="stat-icon">🔗</div>
+            <div>
+              <div class="stat-label">Active Sheets</div>
+              <div class="stat-value" id="stat-sheets">0</div>
+              <div class="stat-sub">Connected spreadsheets</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-header" style="margin-bottom:16px;">
+          <h2 style="font-size:16px;font-weight:700;">Your Forms</h2>
+          <button class="btn btn-primary btn-sm" onclick="navigate('builder'); newForm()">+ Create Form</button>
+        </div>
+
+        <div class="forms-grid" id="forms-grid">
+          <div class="empty-state" style="grid-column:1/-1;">
+            <div class="empty-state-icon">📭</div>
+            <h3>No forms yet</h3>
+            <p>Create your first form to get started</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUILDER PAGE -->
+      <div class="page" id="page-builder">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+          <input type="text" id="form-title-input" placeholder="Form title..." style="max-width:280px;font-weight:600;font-size:15px;" />
+          <input type="text" id="form-desc-input" placeholder="Description (optional)" style="max-width:320px;" />
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="previewForm()">👁 Preview</button>
+            <button class="btn btn-primary btn-sm" onclick="saveForm()">💾 Save Form</button>
+          </div>
+        </div>
+
+        <div class="builder-layout">
+          <!-- Canvas -->
+          <div class="builder-canvas">
+            <div class="field-count-bar">
+              <span style="color:var(--text2);font-size:13px;">Form Fields</span>
+              <span class="field-count-badge" id="field-count-badge">0 fields</span>
+            </div>
+
+            <!-- Fields list — separate from drop zone -->
+            <div id="fields-list" class="fields-list"></div>
+
+            <!-- Drop zone — always visible, always at the bottom -->
+            <div class="drop-zone" id="drop-zone"
+              ondrop="dropField(event)"
+              ondragover="dragOver(event)"
+              ondragleave="dragLeave(event)">
+              <span id="drop-placeholder">📥 Drop a field here, or click a field type on the right →</span>
+            </div>
+          </div>
+
+          <!-- Panel -->
+          <div class="builder-panel">
+            <!-- Field Palette -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">Field Types</div></div>
+              <div class="field-palette-grid" id="field-palette">
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'text')" onclick="addFieldFromPalette('text')">✏️ Text</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'number')" onclick="addFieldFromPalette('number')">🔢 Number</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'email')" onclick="addFieldFromPalette('email')">📧 Email</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'tel')" onclick="addFieldFromPalette('tel')">📱 Phone</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'date')" onclick="addFieldFromPalette('date')">📅 Date</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'textarea')" onclick="addFieldFromPalette('textarea')">📄 Long Text</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'select')" onclick="addFieldFromPalette('select')">🔽 Dropdown</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'radio')" onclick="addFieldFromPalette('radio')">⚪ Radio</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'checkbox')" onclick="addFieldFromPalette('checkbox')">☑️ Checkbox</div>
+                <div class="palette-item" draggable="true" ondragstart="dragStart(event,'file')" onclick="addFieldFromPalette('file')">📎 File</div>
+              </div>
+            </div>
+
+            <!-- Sheet Config -->
+            <div class="card">
+              <div class="card-title" style="margin-bottom:12px;">🔗 Google Sheets</div>
+              <div class="form-group">
+                <label class="form-label">Apps Script Web App URL</label>
+                <input type="url" id="sheet-url-input" placeholder="https://script.google.com/macros/..." />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sheet Name (tab)</label>
+                <input type="text" id="sheet-name-input" placeholder="Sheet1" value="Sheet1" />
+              </div>
+              <div class="gsheet-status" id="sheet-status">
+                <div class="status-dot disconnected"></div>
+                <span style="color:var(--text2);">Not configured — enter URL above</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBMISSIONS PAGE -->
+      <div class="page" id="page-submissions">
+        <div style="margin-bottom:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <select id="sub-form-filter" style="width:auto;min-width:180px;" onchange="renderSubmissions()">
+            <option value="all">All Forms</option>
+          </select>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn btn-green btn-sm" onclick="exportCSV()">📥 Export CSV</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportExcel()">📊 Export Excel</button>
+          </div>
+        </div>
+        <div class="search-bar">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="sub-search" placeholder="Search submissions..." oninput="renderSubmissions()" />
+          </div>
+          <input type="date" id="sub-date-filter" onchange="renderSubmissions()" style="width:auto;" />
+          <button class="btn btn-ghost btn-sm" onclick="clearSubFilters()">Clear</button>
+        </div>
+        <div id="submissions-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>No submissions yet</h3>
+            <p>When people fill your forms, their responses appear here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS PAGE -->
+      <div class="page" id="page-settings">
+        <div class="settings-section">
+          <div class="settings-section-title">Appearance</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Dark Mode</div>
+              <div class="setting-desc">Switch between dark and light theme</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="dark-toggle" checked onchange="toggleThemeSwitch(this)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Google Sheets Integration</div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <h3 style="font-size:14px;margin-bottom:16px;">Step-by-Step Setup Guide</h3>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-glow);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;">1</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;margin-bottom:3px;">Open Google Sheets & Apps Script</div>
+                  <div style="font-size:12px;color:var(--text2);">Go to <a href="https://sheets.google.com" target="_blank">Google Sheets</a>, create a new sheet, then click <strong>Extensions → Apps Script</strong>.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-glow);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;">2</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;margin-bottom:3px;">Paste the Apps Script code</div>
+                  <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Delete the existing code and paste this:</div>
+                  <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;color:var(--green);">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName(data.sheetName || 'Sheet1');
+    if (!sheet) {
+      sheet = SpreadsheetApp
+        .getActiveSpreadsheet()
+        .insertSheet(data.sheetName || 'Sheet1');
+    }
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(data.headers);
+    }
+    sheet.appendRow(data.values);
+    return ContentService
+      .createTextOutput(JSON.stringify({status:'ok'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({status:'error',message:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({status:'ready'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+                  <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="copyScript()">📋 Copy Script</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-glow);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;">3</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;margin-bottom:3px;">Deploy as Web App</div>
+                  <div style="font-size:12px;color:var(--text2);">Click <strong>Deploy → New Deployment</strong>. Choose <strong>Web App</strong>. Set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>. Click Deploy and copy the URL.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-glow);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;">4</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600;margin-bottom:3px;">Paste URL in Form Builder</div>
+                  <div style="font-size:12px;color:var(--text2);">When creating/editing a form, paste the deployment URL in the <strong>Apps Script Web App URL</strong> field.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Data Management</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Clear All Data</div>
+              <div class="setting-desc">Delete all forms and submissions from local storage</div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="clearAllData()">Clear Data</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Export All Data</div>
+              <div class="setting-desc">Download everything as JSON backup</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="exportAllJSON()">Export JSON</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FORM FILL VIEW -->
+<div id="form-fill-view" style="display:none;min-height:100vh;background:var(--bg);position:fixed;inset:0;overflow-y:auto;z-index:500;">
+  <div style="max-width:680px;margin:0 auto;padding:40px 20px;">
+    <button class="btn btn-ghost btn-sm" onclick="closeFillView()" style="margin-bottom:24px;">← Back to Dashboard</button>
+    <div id="form-fill-content"></div>
+  </div>
+</div>
+
+<!-- FIELD EDIT MODAL -->
+<div class="modal-overlay" id="field-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Configure Field</div>
+    <div class="form-group">
+      <label class="form-label">Label</label>
+      <input type="text" id="field-label" placeholder="e.g. Full Name" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Placeholder</label>
+      <input type="text" id="field-placeholder" placeholder="e.g. Enter your name" />
+    </div>
+    <div class="form-group" id="options-group" style="display:none;">
+      <label class="form-label">Options (one per line)</label>
+      <textarea id="field-options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="field-required" />
+      <label for="field-required" style="font-size:14px;cursor:pointer;">Required field</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveField()">Save Field</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE LINK MODAL -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal">
+    <div class="modal-title">🔗 Share Form</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Anyone with this link can fill and submit this form. Responses appear in your connected Google Sheet automatically.</p>
+    <div class="share-box">
+      <span class="share-link" id="share-link-text"></span>
+      <button class="btn btn-primary btn-sm copy-btn" onclick="copyShareLink()">Copy</button>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeShareModal()">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="openFillPreview()">👁 Preview Form</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let state = {
+  forms: [],
+  submissions: [],
+  editingFormId: null,
+  shareFormId: null,
+  theme: 'dark'
+};
+
+// ═══════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════
+function saveState() {
+  try {
+    localStorage.setItem('formsync_forms', JSON.stringify(state.forms));
+    localStorage.setItem('formsync_submissions', JSON.stringify(state.submissions));
+    localStorage.setItem('formsync_theme', state.theme);
+  } catch(e) {}
+}
+function loadState() {
+  try {
+    const forms = localStorage.getItem('formsync_forms');
+    const subs = localStorage.getItem('formsync_submissions');
+    const theme = localStorage.getItem('formsync_theme');
+    if (forms) state.forms = JSON.parse(forms);
+    if (subs) state.submissions = JSON.parse(subs);
+    if (theme) { state.theme = theme; applyTheme(theme); }
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════
+const PAGE_TITLES = { dashboard:'Dashboard', builder:'Form Builder', submissions:'Submissions', settings:'Settings' };
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[page];
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'submissions') { populateSubFilter(); renderSubmissions(); }
+  if (window.innerWidth < 900) document.getElementById('sidebar').classList.remove('open');
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : '');
+  document.getElementById('themeBtn').textContent = t === 'light' ? '🌙' : '☀️';
+  const toggle = document.getElementById('dark-toggle');
+  if (toggle) toggle.checked = t === 'dark';
+}
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(state.theme);
+  saveState();
+}
+function toggleThemeSwitch(el) {
+  state.theme = el.checked ? 'dark' : 'light';
+  applyTheme(state.theme);
+  saveState();
+}
+
+// ═══════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  const totalForms = state.forms.length;
+  const totalSubs = state.submissions.length;
+  const today = new Date().toDateString();
+  const todaySubs = state.submissions.filter(s => new Date(s.submittedAt).toDateString() === today).length;
+  const connectedSheets = state.forms.filter(f => f.sheetUrl).length;
+  document.getElementById('stat-forms').textContent = totalForms;
+  document.getElementById('stat-subs').textContent = totalSubs;
+  document.getElementById('stat-today').textContent = todaySubs;
+  document.getElementById('stat-today-date').textContent = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('stat-sheets').textContent = connectedSheets;
+
+  const grid = document.getElementById('forms-grid');
+  if (state.forms.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📭</div><h3>No forms yet</h3><p>Create your first form to start collecting data</p></div>`;
+    return;
+  }
+  grid.innerHTML = state.forms.map(f => {
+    const subs = state.submissions.filter(s => s.formId === f.id).length;
+    return `
+    <div class="form-card">
+      <div class="form-card-name">${esc(f.title || 'Untitled Form')}</div>
+      <div class="form-card-meta">
+        <span>📋 ${f.fields.length} fields</span>
+        <span>📨 ${subs} responses</span>
+        <span>${f.sheetUrl ? '🟢 Sheet linked' : '🟡 No sheet'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">Created ${fmtDate(f.createdAt)}</div>
+      <div class="form-card-actions">
+        <button class="btn btn-primary btn-sm" onclick="showShareModal('${f.id}')">🔗 Share</button>
+        <button class="btn btn-ghost btn-sm" onclick="editForm('${f.id}')">✏️ Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="previewFormById('${f.id}')">👁 Fill</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteForm('${f.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  FORM BUILDER
+// ═══════════════════════════════════════════
+
+// builderFields holds ALL fields for the form being edited/created
+let builderFields = [];
+
+// editingFieldIndex: which existing field is being edited (-1 = new field)
+let editingFieldIndex = -1;
+
+// pendingFieldType: type of the field being configured in modal
+let pendingFieldType = null;
+
+// Drag state — only for palette drags
+let paletteDragType = null;
+
+function newForm() {
+  state.editingFormId = null;
+  builderFields = [];
+  document.getElementById('form-title-input').value = '';
+  document.getElementById('form-desc-input').value = '';
+  document.getElementById('sheet-url-input').value = '';
+  document.getElementById('sheet-name-input').value = 'Sheet1';
+  renderBuilderCanvas();
+  updateSheetStatus();
+}
+
+function editForm(id) {
+  const form = state.forms.find(f => f.id === id);
+  if (!form) return;
+  state.editingFormId = id;
+  builderFields = JSON.parse(JSON.stringify(form.fields));
+  document.getElementById('form-title-input').value = form.title;
+  document.getElementById('form-desc-input').value = form.description || '';
+  document.getElementById('sheet-url-input').value = form.sheetUrl || '';
+  document.getElementById('sheet-name-input').value = form.sheetName || 'Sheet1';
+  navigate('builder');
+  renderBuilderCanvas();
+  updateSheetStatus();
+}
+
+function saveForm() {
+  const title = document.getElementById('form-title-input').value.trim() || 'Untitled Form';
+  const desc = document.getElementById('form-desc-input').value.trim();
+  const sheetUrl = document.getElementById('sheet-url-input').value.trim();
+  const sheetName = document.getElementById('sheet-name-input').value.trim() || 'Sheet1';
+  if (builderFields.length === 0) { toast('Add at least one field', 'error'); return; }
+
+  if (state.editingFormId) {
+    const idx = state.forms.findIndex(f => f.id === state.editingFormId);
+    state.forms[idx] = { ...state.forms[idx], title, description: desc, fields: builderFields, sheetUrl, sheetName, updatedAt: new Date().toISOString() };
+    toast('Form saved!', 'success');
+  } else {
+    const form = { id: uid(), title, description: desc, fields: builderFields, sheetUrl, sheetName, createdAt: new Date().toISOString() };
+    state.forms.push(form);
+    state.editingFormId = form.id;
+    toast('Form created!', 'success');
+  }
+  saveState();
+  updateSheetStatus();
+}
+
+function deleteForm(id) {
+  if (!confirm('Delete this form? All submissions remain in local storage.')) return;
+  state.forms = state.forms.filter(f => f.id !== id);
+  saveState();
+  renderDashboard();
+  toast('Form deleted', 'info');
+}
+
+// ──────────────────────────────────────────
+//  Builder Canvas Render
+//  KEY FIX: fields-list and drop-zone are SEPARATE elements.
+//  Fields are rendered in #fields-list.
+//  #drop-zone is ALWAYS visible below, ready for new drops.
+// ──────────────────────────────────────────
+function renderBuilderCanvas() {
+  const fieldsList = document.getElementById('fields-list');
+  const dropZone = document.getElementById('drop-zone');
+  const badge = document.getElementById('field-count-badge');
+
+  // Update badge
+  badge.textContent = builderFields.length + (builderFields.length === 1 ? ' field' : ' fields');
+
+  // Update drop zone hint
+  if (builderFields.length === 0) {
+    dropZone.innerHTML = '<span>📥 Drop a field here, or click a field type on the right →</span>';
+  } else {
+    dropZone.innerHTML = '<span>➕ Drop another field here</span>';
+  }
+
+  // Render fields — NOTE: these are NOT draggable by themselves to avoid
+  // interfering with palette drag events. Reorder handle uses mousedown instead.
+  if (builderFields.length === 0) {
+    fieldsList.innerHTML = '';
+    return;
+  }
+
+  fieldsList.innerHTML = builderFields.map((f, i) => `
+    <div class="field-item" id="fi-${i}">
+      <span class="field-drag-handle" title="Drag to reorder" 
+        draggable="true"
+        ondragstart="reorderDragStart(event, ${i})"
+        ondragend="reorderDragEnd(event)">⠿</span>
+      <div class="field-info">
+        <div class="field-name">${esc(f.label)}</div>
+        <div class="field-type">${fieldTypeLabel(f.type)}${f.required ? ' · <span style="color:var(--red)">required</span>' : ''}</div>
+      </div>
+      <div class="field-actions">
+        <button class="btn btn-ghost btn-icon btn-sm" title="Edit field" onclick="openFieldModal(${i}, null)">✏️</button>
+        <button class="btn btn-danger btn-icon btn-sm" title="Remove field" onclick="removeField(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+
+  // Attach dragover/drop to each field-item for reordering
+  builderFields.forEach((_, i) => {
+    const el = document.getElementById(`fi-${i}`);
+    if (el) {
+      el.addEventListener('dragover', fieldItemDragOver);
+      el.addEventListener('drop', fieldItemDrop);
+      el.addEventListener('dragleave', fieldItemDragLeave);
+    }
+  });
+}
+
+function fieldTypeLabel(type) {
+  const labels = { text:'Text', number:'Number', email:'Email', tel:'Phone', date:'Date', textarea:'Long Text', select:'Dropdown', radio:'Radio', checkbox:'Checkbox', file:'File' };
+  return labels[type] || type;
+}
+
+// ──────────────────────────────────────────
+//  PALETTE DRAG — from field type palette to drop-zone
+// ──────────────────────────────────────────
+function dragStart(e, type) {
+  paletteDragType = type;           // Store which palette item is being dragged
+  e.dataTransfer.setData('text/plain', 'palette:' + type);
+  e.dataTransfer.effectAllowed = 'copy';
+}
+
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  document.getElementById('drop-zone').classList.add('drag-over');
+}
+
+function dragLeave(e) {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+}
+
+function dropField(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const data = e.dataTransfer.getData('text/plain');
+  // Only handle palette drops here (not reorder drops)
+  if (data && data.startsWith('palette:')) {
+    const type = data.replace('palette:', '');
+    paletteDragType = null;
+    openFieldModal(-1, type);
+  } else if (paletteDragType) {
+    // Fallback: use stored palette type
+    const type = paletteDragType;
+    paletteDragType = null;
+    openFieldModal(-1, type);
+  }
+}
+
+// ──────────────────────────────────────────
+//  CLICK TO ADD FROM PALETTE
+// ──────────────────────────────────────────
+function addFieldFromPalette(type) {
+  openFieldModal(-1, type);
+}
+
+// ──────────────────────────────────────────
+//  REORDER DRAG — drag handle only
+// ──────────────────────────────────────────
+let reorderFromIndex = null;
+let reorderTargetEl = null;
+
+function reorderDragStart(e, idx) {
+  reorderFromIndex = idx;
+  e.dataTransfer.setData('text/plain', 'reorder:' + idx);
+  e.dataTransfer.effectAllowed = 'move';
+  // Small delay so the element doesn't disappear immediately
+  setTimeout(() => {
+    const el = document.getElementById(`fi-${idx}`);
+    if (el) el.style.opacity = '0.4';
+  }, 0);
+}
+
+function reorderDragEnd(e) {
+  // Restore opacity of all items
+  builderFields.forEach((_, i) => {
+    const el = document.getElementById(`fi-${i}`);
+    if (el) el.style.opacity = '';
+  });
+  if (reorderTargetEl) {
+    reorderTargetEl.style.borderTop = '';
+    reorderTargetEl.style.borderBottom = '';
+    reorderTargetEl = null;
+  }
+  reorderFromIndex = null;
+}
+
+function fieldItemDragOver(e) {
+  const data = e.dataTransfer.getData('text/plain');
+  // Only handle reorder drags on field items (not palette drags)
+  if (reorderFromIndex === null) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const el = e.currentTarget;
+  if (reorderTargetEl && reorderTargetEl !== el) {
+    reorderTargetEl.style.borderTop = '';
+    reorderTargetEl.style.borderBottom = '';
+  }
+  reorderTargetEl = el;
+  const rect = el.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  if (e.clientY < midY) {
+    el.style.borderTop = '2px solid var(--accent)';
+    el.style.borderBottom = '';
+  } else {
+    el.style.borderBottom = '2px solid var(--accent)';
+    el.style.borderTop = '';
+  }
+}
+
+function fieldItemDragLeave(e) {
+  const el = e.currentTarget;
+  el.style.borderTop = '';
+  el.style.borderBottom = '';
+  if (reorderTargetEl === el) reorderTargetEl = null;
+}
+
+function fieldItemDrop(e) {
+  e.preventDefault();
+  e.stopPropagation(); // Don't bubble to drop-zone
+  const data = e.dataTransfer.getData('text/plain');
+  
+  // Handle reorder
+  if (data && data.startsWith('reorder:') && reorderFromIndex !== null) {
+    const el = e.currentTarget;
+    const toIndex = parseInt(el.id.replace('fi-', ''));
+    el.style.borderTop = '';
+    el.style.borderBottom = '';
+    reorderTargetEl = null;
+
+    if (reorderFromIndex !== toIndex) {
+      const rect = el.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const insertAfter = e.clientY >= midY;
+      
+      const moved = builderFields.splice(reorderFromIndex, 1)[0];
+      let insertAt = toIndex;
+      if (reorderFromIndex < toIndex) insertAt = toIndex - 1;
+      if (insertAfter) insertAt += 1;
+      insertAt = Math.max(0, Math.min(insertAt, builderFields.length));
+      builderFields.splice(insertAt, 0, moved);
+      renderBuilderCanvas();
+      toast('Field reordered', 'info');
+    }
+  }
+  // Ignore palette drops on field items (they go to the drop-zone)
+}
+
+// ──────────────────────────────────────────
+//  REMOVE FIELD
+// ──────────────────────────────────────────
+function removeField(i) {
+  builderFields.splice(i, 1);
+  renderBuilderCanvas();
+  toast('Field removed', 'info');
+}
+
+// ═══════════════════════════════════════════
+//  FIELD MODAL
+//  openFieldModal(idx, type):
+//    idx = -1  → adding new field of `type`
+//    idx >= 0  → editing existing field at index (type comes from the field itself)
+// ═══════════════════════════════════════════
+function openFieldModal(idx, type) {
+  editingFieldIndex = idx;
+
+  // If editing existing field, get its type; if new, use the passed type
+  if (idx >= 0) {
+    const f = builderFields[idx];
+    pendingFieldType = f.type;
+    document.getElementById('modal-title').textContent = 'Edit Field';
+    document.getElementById('field-label').value = f.label;
+    document.getElementById('field-placeholder').value = f.placeholder || '';
+    document.getElementById('field-required').checked = f.required;
+    document.getElementById('field-options').value = (f.options || []).join('\n');
+  } else {
+    pendingFieldType = type;
+    document.getElementById('modal-title').textContent = 'Add ' + capitalize(type || 'Field') + ' Field';
+    document.getElementById('field-label').value = capitalize(type || 'Field');
+    document.getElementById('field-placeholder').value = '';
+    document.getElementById('field-required').checked = false;
+    const hasOpts = ['select','radio','checkbox'].includes(type);
+    document.getElementById('field-options').value = hasOpts ? 'Option 1\nOption 2\nOption 3' : '';
+  }
+
+  // Show options textarea only for select/radio/checkbox
+  const hasOptions = ['select','radio','checkbox'].includes(pendingFieldType);
+  document.getElementById('options-group').style.display = hasOptions ? '' : 'none';
+
+  document.getElementById('field-modal').classList.add('open');
+  setTimeout(() => document.getElementById('field-label').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('field-modal').classList.remove('open');
+  editingFieldIndex = -1;
+  pendingFieldType = null;
+}
+
+function saveField() {
+  const label = document.getElementById('field-label').value.trim();
+  if (!label) { toast('Label is required', 'error'); return; }
+  if (!pendingFieldType) { toast('Field type is missing', 'error'); return; }
+
+  const field = {
+    type: pendingFieldType,
+    label,
+    placeholder: document.getElementById('field-placeholder').value.trim(),
+    required: document.getElementById('field-required').checked,
+    options: ['select','radio','checkbox'].includes(pendingFieldType)
+      ? document.getElementById('field-options').value.split('\n').map(s => s.trim()).filter(Boolean)
+      : []
+  };
+
+  if (editingFieldIndex >= 0) {
+    // Update existing field
+    builderFields[editingFieldIndex] = field;
+    toast('Field updated ✅', 'success');
+  } else {
+    // Add new field — this is the key fix: always push to the array
+    builderFields.push(field);
+    toast('Field added ✅', 'success');
+  }
+
+  closeModal();
+  renderBuilderCanvas(); // Re-render with updated fields array
+}
+
+// ═══════════════════════════════════════════
+//  SHEET STATUS
+// ═══════════════════════════════════════════
+function updateSheetStatus() {
+  const url = document.getElementById('sheet-url-input').value.trim();
+  const el = document.getElementById('sheet-status');
+  if (url && url.startsWith('https://script.google.com')) {
+    el.innerHTML = `<div class="status-dot connected"></div><span style="color:var(--green);">Connected — submissions will sync to Google Sheets</span>`;
+  } else {
+    el.innerHTML = `<div class="status-dot disconnected"></div><span style="color:var(--text2);">Not configured — data saved locally only</span>`;
+  }
+}
+document.getElementById('sheet-url-input').addEventListener('input', updateSheetStatus);
+
+// ═══════════════════════════════════════════
+//  FORM PREVIEW / FILL
+// ═══════════════════════════════════════════
+function previewForm() {
+  if (!state.editingFormId) { toast('Save the form first', 'error'); return; }
+  previewFormById(state.editingFormId);
+}
+function previewFormById(id) {
+  const form = state.forms.find(f => f.id === id);
+  if (!form) return;
+  renderFillView(form);
+  document.getElementById('form-fill-view').style.display = '';
+}
+function closeFillView() {
+  document.getElementById('form-fill-view').style.display = 'none';
+}
+function openFillPreview() {
+  closeShareModal();
+  previewFormById(state.shareFormId);
+}
+
+function renderFillView(form) {
+  const container = document.getElementById('form-fill-content');
+  container.innerHTML = `
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px;">⚡</div>
+      <h1 style="font-size:26px;font-weight:700;margin-bottom:8px;">${esc(form.title)}</h1>
+      ${form.description ? `<p style="font-size:14px;color:var(--text2);">${esc(form.description)}</p>` : ''}
+    </div>
+    <div id="fill-form-inner">
+      <div class="form-fill-card" id="fill-card">
+        ${form.fields.map((f, i) => renderFillField(f, i)).join('')}
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:15px;margin-top:8px;" onclick="submitFillForm('${form.id}')">
+          Submit Form →
+        </button>
+        ${form.sheetUrl ? `<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:10px;">🔗 This form syncs to Google Sheets</div>` : ''}
+      </div>
+    </div>
+    <div class="success-screen" id="fill-success">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:48px 32px;text-align:center;">
+        <div class="success-icon">✅</div>
+        <h2 style="font-size:22px;margin-bottom:8px;">Submitted Successfully!</h2>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:24px;">Your response has been recorded${form.sheetUrl ? ' and synced to Google Sheets' : ''}.</p>
+        <button class="btn btn-primary" onclick="restartFill('${form.id}')">Submit Another Response</button>
+      </div>
+    </div>`;
+}
+
+function renderFillField(field, i) {
+  const req = field.required ? '<span class="required-star">*</span>' : '';
+  let input = '';
+  switch (field.type) {
+    case 'text': case 'email': case 'tel': case 'number':
+      input = `<input type="${field.type}" id="fill-${i}" placeholder="${esc(field.placeholder)}" ${field.required ? 'required' : ''} />`;
+      break;
+    case 'date':
+      input = `<input type="date" id="fill-${i}" ${field.required ? 'required' : ''} />`;
+      break;
+    case 'textarea':
+      input = `<textarea id="fill-${i}" rows="3" placeholder="${esc(field.placeholder)}" ${field.required ? 'required' : ''}></textarea>`;
+      break;
+    case 'select':
+      input = `<select id="fill-${i}"><option value="">— Select —</option>${(field.options||[]).map(o => `<option>${esc(o)}</option>`).join('')}</select>`;
+      break;
+    case 'radio':
+      input = `<div class="radio-group">${(field.options||[]).map((o,oi) => `
+        <label class="radio-item"><input type="radio" name="fill-${i}" id="fill-${i}-${oi}" value="${esc(o)}" />${esc(o)}</label>`).join('')}</div>`;
+      break;
+    case 'checkbox':
+      input = `<div class="checkbox-group">${(field.options||[]).map((o,oi) => `
+        <label class="checkbox-item"><input type="checkbox" id="fill-${i}-${oi}" value="${esc(o)}" />${esc(o)}</label>`).join('')}</div>`;
+      break;
+    case 'file':
+      input = `<input type="file" id="fill-${i}" ${field.required ? 'required' : ''} />`;
+      break;
+    default:
+      input = `<input type="text" id="fill-${i}" placeholder="${esc(field.placeholder || '')}" />`;
+  }
+  return `<div class="fill-field" id="ffg-${i}">
+    <div class="fill-label">${esc(field.label)} ${req}</div>
+    ${input}
+    <div class="field-error" id="ferr-${i}"></div>
+  </div>`;
+}
+
+function getFieldValue(field, i) {
+  switch (field.type) {
+    case 'radio':
+      const rChecked = document.querySelector(`input[name="fill-${i}"]:checked`);
+      return rChecked ? rChecked.value : '';
+    case 'checkbox':
+      const cbVals = [];
+      (field.options||[]).forEach((o,oi) => {
+        const cb = document.getElementById(`fill-${i}-${oi}`);
+        if (cb && cb.checked) cbVals.push(o);
+      });
+      return cbVals.join(', ');
+    case 'file':
+      const fEl = document.getElementById(`fill-${i}`);
+      return fEl && fEl.files[0] ? fEl.files[0].name : '';
+    default:
+      const el = document.getElementById(`fill-${i}`);
+      return el ? el.value.trim() : '';
+  }
+}
+
+async function submitFillForm(formId) {
+  const form = state.forms.find(f => f.id === formId);
+  if (!form) return;
+  let hasError = false;
+
+  form.fields.forEach((field, i) => {
+    const val = getFieldValue(field, i);
+    const errEl = document.getElementById(`ferr-${i}`);
+    if (errEl) errEl.textContent = '';
+    if (field.required && !val) {
+      if (errEl) errEl.textContent = `${field.label} is required`;
+      hasError = true;
+    }
+    if (field.type === 'email' && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      if (errEl) errEl.textContent = 'Enter a valid email address';
+      hasError = true;
+    }
+  });
+  if (hasError) { toast('Please fix the errors above', 'error'); return; }
+
+  const values = form.fields.map((field, i) => getFieldValue(field, i));
+  const headers = form.fields.map(f => f.label);
+
+  const sub = { id: uid(), formId, formTitle: form.title, headers, values, submittedAt: new Date().toISOString() };
+  state.submissions.push(sub);
+  saveState();
+
+  const submitBtn = document.querySelector(`button[onclick="submitFillForm('${formId}')"]`);
+  if (submitBtn) { submitBtn.innerHTML = '<span class="spinner"></span> Submitting…'; submitBtn.disabled = true; }
+
+  if (form.sheetUrl) {
+    try {
+      const payload = { headers: ['Submission Date', ...headers], values: [new Date().toLocaleString(), ...values], sheetName: form.sheetName || 'Sheet1' };
+      await fetch(form.sheetUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      toast('Synced to Google Sheets ✅', 'success');
+    } catch (err) {
+      toast('Sheet sync failed — saved locally', 'error');
+    }
+  }
+
+  document.getElementById('fill-card').style.display = 'none';
+  document.getElementById('fill-success').classList.add('show');
+  toast('Submitted!', 'success');
+}
+
+function restartFill(formId) {
+  const form = state.forms.find(f => f.id === formId);
+  if (!form) return;
+  renderFillView(form);
+}
+
+// ═══════════════════════════════════════════
+//  SUBMISSIONS
+// ═══════════════════════════════════════════
+function populateSubFilter() {
+  const sel = document.getElementById('sub-form-filter');
+  sel.innerHTML = '<option value="all">All Forms</option>' +
+    state.forms.map(f => `<option value="${f.id}">${esc(f.title)}</option>`).join('');
+}
+
+function renderSubmissions() {
+  const formFilter = document.getElementById('sub-form-filter').value;
+  const search = document.getElementById('sub-search').value.toLowerCase();
+  const dateFilter = document.getElementById('sub-date-filter').value;
+  let subs = state.submissions;
+
+  if (formFilter !== 'all') subs = subs.filter(s => s.formId === formFilter);
+  if (dateFilter) subs = subs.filter(s => s.submittedAt.startsWith(dateFilter));
+  if (search) subs = subs.filter(s => s.values.some(v => (v||'').toLowerCase().includes(search)) || s.formTitle.toLowerCase().includes(search));
+  subs = [...subs].reverse();
+
+  const container = document.getElementById('submissions-container');
+  if (subs.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><h3>No submissions found</h3><p>Try adjusting filters or wait for new responses.</p></div>`;
+    return;
+  }
+
+  const byForm = {};
+  subs.forEach(s => {
+    if (!byForm[s.formId]) byForm[s.formId] = { title: s.formTitle, subs: [] };
+    byForm[s.formId].subs.push(s);
+  });
+
+  container.innerHTML = Object.entries(byForm).map(([fid, group]) => {
+    const headers = group.subs[0].headers;
+    return `
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">${esc(group.title)}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px;">${group.subs.length} response${group.subs.length!==1?'s':''}</div>
+        </div>
+        <button class="btn btn-green btn-sm" onclick="exportFormCSV('${fid}')">📥 CSV</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Date & Time</th>
+            ${headers.map(h => `<th>${esc(h)}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${group.subs.map((s, i) => `
+            <tr>
+              <td style="color:var(--text3);">${i+1}</td>
+              <td style="white-space:nowrap;font-size:12px;">${fmtDateTime(s.submittedAt)}</td>
+              ${s.values.map(v => `<td class="td-trunc" title="${esc(v||'')}">${esc(v||'—')}</td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearSubFilters() {
+  document.getElementById('sub-search').value = '';
+  document.getElementById('sub-date-filter').value = '';
+  document.getElementById('sub-form-filter').value = 'all';
+  renderSubmissions();
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════
+function exportFormCSV(formId) {
+  const subs = state.submissions.filter(s => s.formId === formId);
+  if (subs.length === 0) { toast('No submissions to export', 'error'); return; }
+  const headers = ['Date & Time', ...subs[0].headers];
+  const rows = subs.map(s => [fmtDateTime(s.submittedAt), ...s.values]);
+  downloadCSV(headers, rows, subs[0].formTitle + '_submissions');
+  toast('CSV downloaded!', 'success');
+}
+function exportCSV() {
+  const formFilter = document.getElementById('sub-form-filter').value;
+  const subs = formFilter === 'all' ? state.submissions : state.submissions.filter(s => s.formId === formFilter);
+  if (subs.length === 0) { toast('No submissions', 'error'); return; }
+  const headers = ['Form', 'Date & Time', ...(subs[0].headers || [])];
+  const rows = subs.map(s => [s.formTitle, fmtDateTime(s.submittedAt), ...s.values]);
+  downloadCSV(headers, rows, 'formsync_submissions');
+  toast('CSV exported!', 'success');
+}
+function exportExcel() { exportCSV(); toast('Excel export uses CSV format', 'info'); }
+function downloadCSV(headers, rows, filename) {
+  const csv = [headers, ...rows].map(r => r.map(c => `"${(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+function exportAllJSON() {
+  const data = JSON.stringify({ forms: state.forms, submissions: state.submissions }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'formsync_backup.json'; a.click();
+  URL.revokeObjectURL(url);
+  toast('JSON backup downloaded!', 'success');
+}
+
+// ═══════════════════════════════════════════
+//  SHARE MODAL
+// ═══════════════════════════════════════════
+function showShareModal(formId) {
+  const form = state.forms.find(f => f.id === formId);
+  if (!form) return;
+  state.shareFormId = formId;
+  const shareUrl = `${location.origin}${location.pathname}#form/${formId}`;
+  document.getElementById('share-link-text').textContent = shareUrl;
+  document.getElementById('share-modal').classList.add('open');
+}
+function closeShareModal() { document.getElementById('share-modal').classList.remove('open'); }
+function copyShareLink() {
+  const text = document.getElementById('share-link-text').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('Link copied!', 'success'));
+}
+
+// ═══════════════════════════════════════════
+//  HASH ROUTING
+// ═══════════════════════════════════════════
+function handleHash() {
+  const hash = location.hash;
+  if (hash.startsWith('#form/')) {
+    const id = hash.replace('#form/', '');
+    const form = state.forms.find(f => f.id === id);
+    if (form) { previewFormById(id); return; }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════
+function clearAllData() {
+  if (!confirm('Clear all forms and submissions? This cannot be undone.')) return;
+  state.forms = []; state.submissions = [];
+  saveState();
+  renderDashboard();
+  toast('All data cleared', 'info');
+}
+function copyScript() {
+  const script = `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(data.sheetName || 'Sheet1');
+    if (!sheet) { sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(data.sheetName || 'Sheet1'); }
+    if (sheet.getLastRow() === 0) { sheet.appendRow(data.headers); }
+    sheet.appendRow(data.values);
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status:'error',message:err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status:'ready'})).setMimeType(ContentService.MimeType.JSON);
+}`;
+  navigator.clipboard.writeText(script).then(() => toast('Script copied!', 'success'));
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+function toast(msg, type = 'info') {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'; }
+function fmtDateTime(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+
+// ═══════════════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════════════
+function seedDemoData() {
+  if (state.forms.length > 0) return;
+  const demoForm = {
+    id: 'demo001',
+    title: 'Employee Registration',
+    description: 'New employee onboarding form',
+    fields: [
+      { type:'text', label:'Full Name', placeholder:'Enter your full name', required:true, options:[] },
+      { type:'email', label:'Email Address', placeholder:'name@company.com', required:true, options:[] },
+      { type:'tel', label:'Phone Number', placeholder:'+1 (555) 000-0000', required:false, options:[] },
+      { type:'select', label:'Department', placeholder:'', required:true, options:['Engineering','Marketing','Sales','HR','Finance'] },
+      { type:'date', label:'Start Date', placeholder:'', required:true, options:[] },
+      { type:'radio', label:'Employment Type', placeholder:'', required:true, options:['Full-time','Part-time','Contract','Internship'] },
+    ],
+    sheetUrl: '',
+    sheetName: 'Sheet1',
+    createdAt: new Date().toISOString()
+  };
+  state.forms.push(demoForm);
+
+  const demoSubs = [
+    { id:uid(), formId:'demo001', formTitle:'Employee Registration', headers:['Full Name','Email Address','Phone Number','Department','Start Date','Employment Type'], values:['Alice Johnson','alice@company.com','+1 555 010 1234','Engineering','2024-01-15','Full-time'], submittedAt: new Date(Date.now()-86400000*2).toISOString() },
+    { id:uid(), formId:'demo001', formTitle:'Employee Registration', headers:['Full Name','Email Address','Phone Number','Department','Start Date','Employment Type'], values:['Bob Chen','bob@company.com','+1 555 020 5678','Marketing','2024-01-20','Part-time'], submittedAt: new Date(Date.now()-86400000).toISOString() },
+    { id:uid(), formId:'demo001', formTitle:'Employee Registration', headers:['Full Name','Email Address','Phone Number','Department','Start Date','Employment Type'], values:['Carol Smith','carol@company.com','','Sales','2024-02-01','Full-time'], submittedAt: new Date().toISOString() },
+  ];
+  state.submissions.push(...demoSubs);
+  saveState();
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+loadState();
+seedDemoData();
+renderDashboard();
+handleHash();
+window.addEventListener('hashchange', handleHash);
+</script>
+</body>
+</html>
